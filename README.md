@@ -6,7 +6,7 @@
 <a href="https://bundlephobia.com/result?p=svelte-grid@1.5.0">
   <img src="https://img.shields.io/bundlephobia/min/svelte-grid?style=for-the-badge"/>
 </a>
-  
+
 <a href="https://bundlephobia.com/result?p=svelte-grid@1.5.0">
   <img src="https://img.shields.io/bundlephobia/minzip/svelte-grid?style=for-the-badge"/>
 </a>
