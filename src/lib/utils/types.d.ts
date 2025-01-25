@@ -21,10 +21,11 @@ export type ColumnItem = {
   h: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Item<T = any> = {
   id: string | number;
   [col: number]: ColumnItem;
-  data?: T;
+  data: T;
 }
 
 export type Matrix = number[][]

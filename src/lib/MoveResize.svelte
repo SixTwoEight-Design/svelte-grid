@@ -64,7 +64,9 @@
   class:svlt-grid-active={active || (trans && rect)}
   style="width: {active ? newSize.width : width}px; height:{active ? newSize.height : height}px;
   {active ? `transform: translate(${cordDiff.x}px, ${cordDiff.y}px);top:${rect.top}px;left:${rect.left}px;` : trans ? `transform: translate(${cordDiff.x}px, ${cordDiff.y}px); position:absolute; transition: width 0.2s, height 0.2s;` : `transition: transform 0.2s, opacity 0.2s; transform: translate(${left}px, ${top}px); `} ">
-  <slot movePointerDown={pointerdown} {resizePointerDown} />
+
+  {@render renderItemContent({movePointerDown: pointerdown, resizePointerDown})}
+
   {#if resizable && !item.customResizer}
       <div class="svlt-grid-resizer" onpointerdown={resizePointerDown}></div>
   {/if}
@@ -90,11 +92,13 @@
 
 <script lang="ts">
     import type { ColumnItem } from "$lib/utils/types.js";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, type Snippet } from "svelte";
 
   const dispatch = createEventDispatcher();
 
   let {
+    renderItemContent,
+
     sensor,
     width,
     height,
@@ -114,6 +118,11 @@
     cols,
     nativeContainer,
   }: {
+    renderItemContent: Snippet<[{
+      movePointerDown: (e: PointerEvent) => void,
+      resizePointerDown: (e: PointerEvent) => void
+    }]>
+
     sensor: number;
     width: number;
     height: number;
@@ -122,7 +131,7 @@
     resizable: boolean;
     draggable: boolean;
     id: string | number;
-    container: Element;
+    container?: Element;
     xPerPx: number;
     yPerPx: number;
     gapX: number;
@@ -194,7 +203,7 @@
   let rect = $state({ left: 0, top: 0 });
   let scrollElement: Element|undefined = $state();
 
-  const getContainerFrame = (element: Element) => {
+  const getContainerFrame = (element?: Element) => {
     if (element === document.documentElement || !element) {
       const { top, bottom } = nativeContainer.getBoundingClientRect();
 
@@ -207,7 +216,7 @@
     return element.getBoundingClientRect();
   };
 
-  const getScroller = (element: Element) => (!element ? document.documentElement : element);
+  const getScroller = (element?: Element) => (!element ? document.documentElement : element);
 
   const pointerdown = ({ clientX, clientY, target }: PointerEvent) => {
     initX = clientX;

@@ -29,22 +29,28 @@
         {sensor}
         container={scroller}
         nativeContainer={container}
-        let:resizePointerDown
-        let:movePointerDown>
-        {#if item[getComputedCols]}
-          {@render renderItem({item, columnItem: item[getComputedCols], index: i, movePointerDown, resizePointerDown, })}
-        {/if}
+      >
+        {#snippet renderItemContent({movePointerDown, resizePointerDown})}
+            {#if item[getComputedCols]}
+                {@render renderItem({item, columnItem: item[getComputedCols], index: i, movePointerDown, resizePointerDown, })}
+            {/if}
+        {/snippet}
       </MoveResize>
     {/each}
   {/if}
 </div>
 
-<script lang="ts">
+<script module lang="ts">
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type T = any; //Just for LSP to stop complaining
+</script>
+
+<script lang="ts" generics="T = any">
   import { getContainerHeight } from "./utils/container.js";
   import { moveItemsAroundItem, moveItem, getItemById, specifyUndefinedColumns } from "./utils/item.js";
   import { onMount, createEventDispatcher, type Snippet } from "svelte";
   import { getColumn, throttle } from "./utils/other.js";
-  import MoveResize, { type RepaintEvent } from "./MoveResize/index.svelte";
+  import MoveResize, { type RepaintEvent } from "./MoveResize.svelte";
   import type { Column, ColumnItem, Item } from "./utils/types.js";
 
   const dispatch = createEventDispatcher();
@@ -65,14 +71,14 @@
     sensor = 20,
   }: {
     renderItem: Snippet<[{
-      item: Item,
+      item: Item<T>,
       columnItem: ColumnItem;
       index: number,
       movePointerDown: (e: PointerEvent) => void,
       resizePointerDown: (e: PointerEvent) => void,
     }]>;
 
-    items: Item[];
+    items: Item<T>[];
     rowHeight: number;
     cols: Column[];
 
@@ -81,7 +87,7 @@
     fastStart?: boolean;
     throttleUpdate?: number;
     throttleResize?: number;
-    scroller?: unknown; //TODO: what is this?
+    scroller?: Element;
     sensor?: number;
   } = $props();
 

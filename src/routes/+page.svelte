@@ -1,21 +1,10 @@
 <script lang="ts">
-  import gridHelp from '$lib/utils/helper.js';
-  import type { Item } from '$lib/utils/types.js';
-  import Grid from '../lib/index.svelte'
+  import { Grid, gridHelp, type Item } from '$lib/index.js'
 
   type ItemData = {
     colour: string;
     text: string;
   }
-
-  const baseItem = gridHelp.item({
-    h: 4,
-    w: 2,
-    x: 0,
-    y: 0,
-    min: {w: 1,h: 1},
-    max: {w: 2,h: 3},
-  })
 
   let items: Item<ItemData>[] = [
     {
