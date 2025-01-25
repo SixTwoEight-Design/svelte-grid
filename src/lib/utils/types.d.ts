@@ -1,4 +1,5 @@
-export type Column = [breakpoint: number, column: number]
+export type ColumnBreakpoint = [breakpoint: number, column: number]
+export type Id = string | number;
 
 export type ColumnItem = {
   fixed: boolean;
@@ -21,11 +22,13 @@ export type ColumnItem = {
   h: number;
 }
 
+export type ColumnItemWithId = ColumnItem & { id: Id };
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Item<T = any> = {
-  id: string | number;
+  id: Id;
   [col: number]: ColumnItem;
   data: T;
 }
 
-export type Matrix = number[][]
+export type Matrix<T = number> = T[][]

@@ -1,4 +1,4 @@
-import type { Column, Item } from "./types.js";
+import type { ColumnBreakpoint, Item } from "./types.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function throttle<T extends (...args: any[]) => any>(func: T, timeFrame: number): T {
@@ -22,7 +22,7 @@ export function getRowsCount(items: Item[], cols: number) {
   return Math.max(...getItemsMaxHeight, 1);
 }
 
-export const getColumn = (containerWidth: number, columns: Column[]): number => {
+export const getColumn = (containerWidth: number, columns: ColumnBreakpoint[]): number => {
   const sortColumns = columns.slice().sort((a, b) => a[0] - b[0]);
 
   const breakpoint = sortColumns.find((value) => {

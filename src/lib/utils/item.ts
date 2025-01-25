@@ -1,12 +1,12 @@
 import { makeMatrix, makeMatrixFromItemsIgnore, findCloseBlocks, findItemsById, makeMatrixFromItems } from "./matrix.js";
 import { getRowsCount } from "./other.js";
-import type { ColumnItem, Item, Matrix } from "./types.js";
+import type { ColumnBreakpoint, ColumnItem, ColumnItemWithId, Id, Item, Matrix } from "./types.js";
 
 export function getItemById(id: Item['id'], items: Item[]) {
   return items.find((value) => value.id === id);
 }
 
-export function findFreeSpaceForItem(matrix: Matrix, item: ColumnItem) {
+export function findFreeSpaceForItem(matrix: Matrix<ColumnItemWithId>, item: ColumnItem) {
   const cols = matrix[0].length;
   const w = Math.min(cols, item.w);
   const xNtime = cols - w;
@@ -37,16 +37,16 @@ const getItem = (item: Item, col: number) => {
   return { ...item[col], id: item.id };
 };
 
-const updateItem = (elements, active, position, col) => {
+const updateItem = (elements: Item[], active: Item, update: Partial<ColumnItem>, col: number) => {
   return elements.map((value) => {
     if (value.id === active.id) {
-      return { ...value, [col]: { ...value[col], ...position } };
+      return { ...value, [col]: { ...value[col], ...update } };
     }
     return value;
   });
 };
 
-export function moveItemsAroundItem(active, items, cols, original) {
+export function moveItemsAroundItem(active: Item, items: Item[], cols: number, /* original?: Item */) {
   // Get current item from the breakpoint
   const activeItem = getItem(active, cols);
   const ids = items.map((value) => value.id).filter((value) => value !== activeItem.id);
@@ -54,24 +54,24 @@ export function moveItemsAroundItem(active, items, cols, original) {
   const els = items.filter((value) => value.id !== activeItem.id);
 
   // Update items
-  let newItems = updateItem(items, active, activeItem, cols);
+  const newItems = updateItem(items, active, activeItem, cols);
 
   let matrix = makeMatrixFromItemsIgnore(newItems, ids, getRowsCount(newItems, cols), cols);
   let tempItems = newItems;
 
   // Exclude resolved elements ids in array
-  let exclude = [];
+  const exclude: Id[] = [];
 
   els.forEach((item) => {
     // Find position for element
-    let position = findFreeSpaceForItem(matrix, item[cols]);
+    const position = findFreeSpaceForItem(matrix, item[cols]);
     // Exclude item
     exclude.push(item.id);
 
     tempItems = updateItem(tempItems, item, position, cols);
 
     // Recreate ids of elements
-    let getIgnoreItems = ids.filter((value) => exclude.indexOf(value) === -1);
+    const getIgnoreItems = ids.filter((value) => exclude.indexOf(value) === -1);
 
     // Update matrix for next iteration
     matrix = makeMatrixFromItemsIgnore(tempItems, getIgnoreItems, getRowsCount(tempItems, cols), cols);
@@ -81,16 +81,16 @@ export function moveItemsAroundItem(active, items, cols, original) {
   return tempItems;
 }
 
-export function moveItem(active, items, cols, original) {
+export function moveItem(active: Item, items: Item[], cols: number, /* original?: Item */) {
   // Get current item from the breakpoint
   const item = getItem(active, cols);
 
   // Create matrix from the items expect the active
   let matrix = makeMatrixFromItemsIgnore(items, [item.id], getRowsCount(items, cols), cols);
   // Getting the ids of items under active Array<String>
-  const closeBlocks = findCloseBlocks(items, matrix, item);
+  const closeBlocks = findCloseBlocks(matrix, item);
   // Getting the objects of items under active Array<Object>
-  let closeObj = findItemsById(closeBlocks, items);
+  const closeObj = findItemsById(closeBlocks, items);
   // Getting whenever of these items is fixed
   const fixed = closeObj.find((value) => value[cols].fixed);
 
@@ -105,15 +105,15 @@ export function moveItem(active, items, cols, original) {
 
   // Create temp vars
   let tempItems = items;
-  let tempCloseBlocks = closeBlocks;
+  const tempCloseBlocks = closeBlocks;
 
   // Exclude resolved elements ids in array
-  let exclude = [];
+  const exclude: Id[] = [];
 
   // Iterate over close elements under active item
   closeObj.forEach((item) => {
     // Find position for element
-    let position = findFreeSpaceForItem(matrix, item[cols]);
+    const position = findFreeSpaceForItem(matrix, item[cols]);
     // Exclude item
     exclude.push(item.id);
 
@@ -121,7 +121,7 @@ export function moveItem(active, items, cols, original) {
     tempItems = updateItem(tempItems, item, position, cols);
 
     // Recreate ids of elements
-    let getIgnoreItems = tempCloseBlocks.filter((value) => exclude.indexOf(value) === -1);
+    const getIgnoreItems = tempCloseBlocks.filter((value) => exclude.indexOf(value) === -1);
 
     // Update matrix for next iteration
     matrix = makeMatrixFromItemsIgnore(tempItems, getIgnoreItems, getRowsCount(tempItems, cols), cols);
@@ -132,13 +132,13 @@ export function moveItem(active, items, cols, original) {
 }
 
 // Helper function
-export function normalize(items, col) {
+export function normalize(items: Item[], col: number) {
   let result = items.slice();
 
-  result.forEach((value) => {
-    const getItem = value[col];
-    if (!getItem.static) {
-      result = moveItem(getItem, result, col, { ...getItem });
+  result.forEach((item) => {
+    const getItem = item[col];
+    if (!getItem.fixed) {
+      result = moveItem(item, result, col, /* { ...item } */);
     }
   });
 
@@ -146,8 +146,8 @@ export function normalize(items, col) {
 }
 
 // Helper function
-export function adjust(items, col) {
-  let matrix = makeMatrix(getRowsCount(items, col), col);
+export function adjust(items: Item[], col: number) {
+  let matrix = makeMatrix<ColumnItemWithId>(getRowsCount(items, col), col);
 
   const order = items.toSorted((a, b) => {
     const aItem = a[col];
@@ -157,7 +157,7 @@ export function adjust(items, col) {
   });
 
   return order.reduce((acc, item) => {
-    let position = findFreeSpaceForItem(matrix, item[col]);
+    const position = findFreeSpaceForItem(matrix, item[col]);
 
     acc.push({
       ...item,
@@ -170,10 +170,10 @@ export function adjust(items, col) {
     matrix = makeMatrixFromItems(acc, getRowsCount(acc, col), col);
 
     return acc;
-  }, []);
+  }, [] as Item[]);
 }
 
-export function getUndefinedItems(items, col, breakpoints) {
+export function getUndefinedItems(items: Item[], col: number) {
   return items
     .map((value) => {
       if (!value[col]) {
@@ -183,9 +183,9 @@ export function getUndefinedItems(items, col, breakpoints) {
     .filter(Boolean);
 }
 
-export function getClosestColumn(items, item, col, breakpoints) {
+export function getClosestColumn(item: Item, col: number, breakpoints: ColumnBreakpoint[]) {
   return breakpoints
-    .map(([_, column]) => item[column] && column)
+    .map(([, column]) => item[column] && column)
     .filter(Boolean)
     .reduce(function (acc, value) {
       const isLower = Math.abs(value - col) < Math.abs(acc - col);
@@ -194,17 +194,20 @@ export function getClosestColumn(items, item, col, breakpoints) {
     });
 }
 
-export function specifyUndefinedColumns(items, col, breakpoints) {
+export function specifyUndefinedColumns(items: Item[], col: number, breakpoints: ColumnBreakpoint[]) {
   let matrix = makeMatrixFromItems(items, getRowsCount(items, col), col);
 
-  const getUndefinedElements = getUndefinedItems(items, col, breakpoints);
+  const getUndefinedElements = getUndefinedItems(items, col);
 
   let newItems = [...items];
 
   getUndefinedElements.forEach((elementId) => {
     const getElement = items.find((item) => item.id === elementId);
+    if (!getElement) {
+      return;
+    }
 
-    const closestColumn = getClosestColumn(items, getElement, col, breakpoints);
+    const closestColumn = getClosestColumn(getElement, col, breakpoints);
 
     const position = findFreeSpaceForItem(matrix, getElement[closestColumn]);
 

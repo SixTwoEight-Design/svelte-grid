@@ -1,57 +1,63 @@
-import type { Item } from "./types.js";
+import type { ColumnItemWithId, Id, Item, Matrix } from "./types.js";
 
-export const makeMatrix = (rows: number, cols: number) => Array.from(Array(rows), () => new Array(cols)); // make 2d array
+export function makeMatrix<T>(rows: number, cols: number): Matrix<T> {
+  return Array.from(Array(rows), () => new Array(cols)); // make 2d array
+}
 
 export function makeMatrixFromItems(items: Item[], _row: number, _col: number) {
-  const matrix = makeMatrix(_row, _col);
+  const matrix = makeMatrix(_row, _col) as Matrix<ColumnItemWithId>;
 
-  for (let i = 0; i < items.length; i++) {
-    const value = items[i][_col];
-    if (value) {
-      const { x, y, h } = value;
-      const id = items[i].id;
-      const w = Math.min(_col, value.w);
+  for (const item of items) {
+    const colItem = item[_col];
+    if (colItem) {
+      const id = item.id;
+      const width = Math.min(_col, colItem.w);
 
-      for (var j = y; j < y + h; j++) {
-        const row = matrix[j];
-        for (var k = x; k < x + w; k++) {
-          row[k] = { ...value, id };
+      // For the Y coords that this item spans:
+      for (let y = colItem.y; y < colItem.y + colItem.h; y++) {
+        const row = matrix[y];
+        for (let k = colItem.x; k < colItem.x + width; k++) {
+          row[k] = { ...colItem, id };
         }
       }
     }
   }
+
   return matrix;
 }
 
-export function findCloseBlocks(items, matrix, curObject) {
-  const { h, x, y } = curObject;
+export function findCloseBlocks(matrix: Matrix<ColumnItemWithId>, colItem: ColumnItemWithId) {
 
-  const w = Math.min(matrix[0].length, curObject.w);
-  const tempR = matrix.slice(y, y + h);
+  const w = Math.min(matrix[0].length, colItem.w);
+  const tempR = matrix.slice(colItem.y, colItem.y + colItem.h);
 
-  let result = [];
-  for (var i = 0; i < tempR.length; i++) {
-    let tempA = tempR[i].slice(x, x + w);
-    result = [...result, ...tempA.map((val) => val.id && val.id !== curObject.id && val.id).filter(Boolean)];
+  let result: Id[] = [];
+  for (let i = 0; i < tempR.length; i++) {
+    const tempA = tempR[i].slice(colItem.x, colItem.x + w);
+    result = [
+      ...result,
+      ...tempA
+        .map((val) => val.id && val.id !== colItem.id && val.id)
+        .filter(Boolean) as Id[],
+    ];
   }
 
   return [...new Set(result)];
 }
 
-export function makeMatrixFromItemsIgnore(items, ignoreList, _row, _col) {
-  let matrix = makeMatrix(_row, _col);
-  for (var i = 0; i < items.length; i++) {
-    const value = items[i][_col];
-    const id = items[i].id;
-    const { x, y, h } = value;
-    const w = Math.min(_col, value.w);
+export function makeMatrixFromItemsIgnore(items: Item[], ignoreList: Id[], _row: number, _col: number) {
+  const matrix = makeMatrix<ColumnItemWithId>(_row, _col);
+  for (const item of items) {
+    const colItem = item[_col];
+    const id = item.id;
+    const width = Math.min(_col, colItem.w);
 
     if (ignoreList.indexOf(id) === -1) {
-      for (var j = y; j < y + h; j++) {
-        const row = matrix[j];
+      for (let y = colItem.y; y < colItem.y + colItem.h; y++) {
+        const row = matrix[y];
         if (row) {
-          for (var k = x; k < x + w; k++) {
-            row[k] = { ...value, id };
+          for (let x = colItem.x; x < colItem.x + width; x++) {
+            row[x] = { ...colItem, id };
           }
         }
       }
@@ -60,6 +66,6 @@ export function makeMatrixFromItemsIgnore(items, ignoreList, _row, _col) {
   return matrix;
 }
 
-export function findItemsById(closeBlocks, items) {
+export function findItemsById(closeBlocks: Id[], items: Item[]) {
   return items.filter((value) => closeBlocks.indexOf(value.id) !== -1);
 }

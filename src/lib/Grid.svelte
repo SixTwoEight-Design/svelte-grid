@@ -32,7 +32,7 @@
       >
         {#snippet renderItemContent({movePointerDown, resizePointerDown})}
             {#if item[getComputedCols]}
-                {@render renderItem({item, columnItem: item[getComputedCols], index: i, movePointerDown, resizePointerDown, })}
+                {@render renderItem({item, columns: getComputedCols, columnItem: item[getComputedCols], index: i, movePointerDown, resizePointerDown, })}
             {/if}
         {/snippet}
       </MoveResize>
@@ -56,7 +56,7 @@
     yPerPx: number,
   }) => void;
   export type OnPointerUpCallback = (data: {
-    id: string|number,
+    id: Id,
     cols: number,
   }) => void;
   export type OnChangeCallback<T> = (data: {
@@ -72,7 +72,7 @@
   import { onMount, type Snippet } from "svelte";
   import { getColumn, throttle } from "./utils/other.js";
   import MoveResize, { type RepaintData, type PointerUpData } from "./MoveResize.svelte";
-  import type { Column, ColumnItem, Item } from "./utils/types.js";
+  import type { ColumnBreakpoint, ColumnItem, Id, Item } from "./utils/types.js";
 
   let {
     renderItem,
@@ -96,6 +96,7 @@
   }: {
     renderItem: Snippet<[{
       item: Item<T>,
+      columns: number;
       columnItem: ColumnItem;
       index: number,
       movePointerDown: (e: PointerEvent) => void,
@@ -104,7 +105,7 @@
 
     items: Item<T>[];
     rowHeight: number;
-    cols: Column[];
+    cols: ColumnBreakpoint[];
 
     gap?: [number, number];
     fillSpace?: boolean;
@@ -197,9 +198,9 @@
       };
 
       if (fillSpace) {
-        items = moveItemsAroundItem(activeItem, items, getComputedCols, getItemById(data.id, items));
+        items = moveItemsAroundItem(activeItem, items, getComputedCols, /*getItemById(data.id, items)*/);
       } else {
-        items = moveItem(activeItem, items, getComputedCols, getItemById(data.id, items));
+        items = moveItem(activeItem, items, getComputedCols, /*getItemById(data.id, items)*/);
       }
 
       if (data.onUpdate) data.onUpdate();

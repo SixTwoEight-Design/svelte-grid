@@ -78,10 +78,10 @@
 
 <script module lang="ts">
   export type PointerUpData = {
-    id: string|number,
+    id: Id,
   }
   export type RepaintData = {
-    id: string|number,
+    id: Id,
     shadow: {
         x: number;
         y: number;
@@ -94,7 +94,7 @@
 </script>
 
 <script lang="ts">
-  import type { ColumnItem } from "$lib/utils/types.js";
+  import type { ColumnItem, Id } from "$lib/utils/types.js";
   import { type Snippet } from "svelte";
 
   let {
@@ -135,7 +135,7 @@
     top: number;
     resizable: boolean;
     draggable: boolean;
-    id: string | number;
+    id: Id;
     container?: Element;
     xPerPx: number;
     yPerPx: number;
