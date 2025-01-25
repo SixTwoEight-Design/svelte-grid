@@ -32,51 +32,73 @@
         let:resizePointerDown
         let:movePointerDown>
         {#if item[getComputedCols]}
-          <slot {movePointerDown} {resizePointerDown} dataItem={item} item={item[getComputedCols]} index={i} />
+          {@render renderItem({item, columnItem: item[getComputedCols], index: i, movePointerDown, resizePointerDown, })}
         {/if}
       </MoveResize>
     {/each}
   {/if}
 </div>
 
-<script>
+<script lang="ts">
   import { getContainerHeight } from "./utils/container.js";
-  import { moveItemsAroundItem, moveItem, getItemById, specifyUndefinedColumns, findFreeSpaceForItem } from "./utils/item.js";
-  import { onMount, createEventDispatcher } from "svelte";
-  import { getColumn, getRowsCount, throttle } from "./utils/other.js";
-  import { makeMatrixFromItems } from "./utils/matrix.js";
-  import MoveResize from "./MoveResize/index.svelte";
+  import { moveItemsAroundItem, moveItem, getItemById, specifyUndefinedColumns } from "./utils/item.js";
+  import { onMount, createEventDispatcher, type Snippet } from "svelte";
+  import { getColumn, throttle } from "./utils/other.js";
+  import MoveResize, { type RepaintEvent } from "./MoveResize/index.svelte";
+  import type { Column, ColumnItem, Item } from "./utils/types.js";
 
   const dispatch = createEventDispatcher();
 
-  export let fillSpace = false;
-  export let items;
-  export let rowHeight;
-  export let cols;
-  export let gap = [10, 10];
-  export let fastStart = false;
-  export let throttleUpdate = 100;
-  export let throttleResize = 100;
+  let {
+    renderItem,
 
-  export let scroller = undefined;
-  export let sensor = 20;
+    items = $bindable(),
+    rowHeight,
+    cols,
 
-  let getComputedCols;
+    gap = [10, 10],
+    fillSpace = false,
+    fastStart = false,
+    throttleUpdate = 100,
+    throttleResize = 100,
+    scroller,
+    sensor = 20,
+  }: {
+    renderItem: Snippet<[{
+      item: Item,
+      columnItem: ColumnItem;
+      index: number,
+      movePointerDown: (e: PointerEvent) => void,
+      resizePointerDown: (e: PointerEvent) => void,
+    }]>;
 
-  let container;
+    items: Item[];
+    rowHeight: number;
+    cols: Column[];
 
-  $: [gapX, gapY] = gap;
+    gap?: [number, number];
+    fillSpace?: boolean;
+    fastStart?: boolean;
+    throttleUpdate?: number;
+    throttleResize?: number;
+    scroller?: unknown; //TODO: what is this?
+    sensor?: number;
+  } = $props();
 
-  let xPerPx = 0;
-  let yPerPx = rowHeight;
+  let getComputedCols: number = $state(0);
 
-  let documentWidth;
+  let container: Element|undefined = $state();
 
-  let containerWidth;
+  let [gapX, gapY] = $derived(gap);
 
-  $: containerHeight = getContainerHeight(items, yPerPx, getComputedCols);
+  let xPerPx: number = $state(0);
+  let yPerPx: number = $derived(rowHeight);
 
-  const pointerup = (ev) => {
+  let containerWidth: number = $state(0);
+
+  let containerHeight = $derived(getContainerHeight(items, yPerPx, getComputedCols));
+
+  const pointerup = (ev: CustomEvent) => {
     dispatch("pointerup", {
       id: ev.detail.id,
       cols: getComputedCols,
@@ -120,12 +142,14 @@
       });
     });
 
-    sizeObserver.observe(container);
+    if (container) {
+      sizeObserver.observe(container);
+    }
 
     return () => sizeObserver.disconnect();
   });
 
-  const updateMatrix = ({ detail }) => {
+  const updateMatrix = ({ detail }: RepaintEvent) => {
     let activeItem = getItemById(detail.id, items);
 
     if (activeItem) {
@@ -155,11 +179,11 @@
 
   const throttleMatrix = throttle(updateMatrix, throttleResize);
 
-  const handleRepaint = ({ detail }) => {
-    if (!detail.isPointerUp) {
-      throttleMatrix({ detail });
+  const handleRepaint = (event: RepaintEvent) => {
+    if (!event.detail.isPointerUp) {
+      throttleMatrix(event);
     } else {
-      updateMatrix({ detail });
+      updateMatrix(event);
     }
   };
 </script>

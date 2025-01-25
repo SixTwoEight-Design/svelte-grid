@@ -1,9 +1,11 @@
-export const makeMatrix = (rows, cols) => Array.from(Array(rows), () => new Array(cols)); // make 2d array
+import type { Item } from "./types.js";
 
-export function makeMatrixFromItems(items, _row, _col) {
-  let matrix = makeMatrix(_row, _col);
+export const makeMatrix = (rows: number, cols: number) => Array.from(Array(rows), () => new Array(cols)); // make 2d array
 
-  for (var i = 0; i < items.length; i++) {
+export function makeMatrixFromItems(items: Item[], _row: number, _col: number) {
+  const matrix = makeMatrix(_row, _col);
+
+  for (let i = 0; i < items.length; i++) {
     const value = items[i][_col];
     if (value) {
       const { x, y, h } = value;

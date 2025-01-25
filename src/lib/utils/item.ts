@@ -1,19 +1,20 @@
 import { makeMatrix, makeMatrixFromItemsIgnore, findCloseBlocks, findItemsById, makeMatrixFromItems } from "./matrix.js";
 import { getRowsCount } from "./other.js";
+import type { ColumnItem, Item, Matrix } from "./types.js";
 
-export function getItemById(id, items) {
+export function getItemById(id: Item['id'], items: Item[]) {
   return items.find((value) => value.id === id);
 }
 
-export function findFreeSpaceForItem(matrix, item) {
+export function findFreeSpaceForItem(matrix: Matrix, item: ColumnItem) {
   const cols = matrix[0].length;
   const w = Math.min(cols, item.w);
-  let xNtime = cols - w;
-  let getMatrixRows = matrix.length;
+  const xNtime = cols - w;
+  const getMatrixRows = matrix.length;
 
-  for (var i = 0; i < getMatrixRows; i++) {
+  for (let i = 0; i < getMatrixRows; i++) {
     const row = matrix[i];
-    for (var j = 0; j < xNtime + 1; j++) {
+    for (let j = 0; j < xNtime + 1; j++) {
       const sliceA = row.slice(j, j + w);
       const empty = sliceA.every((val) => val === undefined);
       if (empty) {
@@ -32,7 +33,7 @@ export function findFreeSpaceForItem(matrix, item) {
   };
 }
 
-const getItem = (item, col) => {
+const getItem = (item: Item, col: number) => {
   return { ...item[col], id: item.id };
 };
 

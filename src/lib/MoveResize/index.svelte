@@ -59,72 +59,105 @@
 
 <div
   draggable={false}
-  on:pointerdown={item && item.customDragger ? null : draggable && pointerdown}
+  onpointerdown={getPointerDownHandler()}
   class="svlt-grid-item"
   class:svlt-grid-active={active || (trans && rect)}
-  style="width: {active ? newSize.width : width}px; height:{active ? newSize.height : height}px; 
+  style="width: {active ? newSize.width : width}px; height:{active ? newSize.height : height}px;
   {active ? `transform: translate(${cordDiff.x}px, ${cordDiff.y}px);top:${rect.top}px;left:${rect.left}px;` : trans ? `transform: translate(${cordDiff.x}px, ${cordDiff.y}px); position:absolute; transition: width 0.2s, height 0.2s;` : `transition: transform 0.2s, opacity 0.2s; transform: translate(${left}px, ${top}px); `} ">
   <slot movePointerDown={pointerdown} {resizePointerDown} />
   {#if resizable && !item.customResizer}
-    <div class="svlt-grid-resizer" on:pointerdown={resizePointerDown} />
+      <div class="svlt-grid-resizer" onpointerdown={resizePointerDown}></div>
   {/if}
 </div>
 
 {#if active || trans}
-  <div class="svlt-grid-shadow shadow-active" style="width: {shadow.w * xPerPx - gapX * 2}px; height: {shadow.h * yPerPx - gapY * 2}px; transform: translate({shadow.x * xPerPx + gapX}px, {shadow.y * yPerPx + gapY}px); " bind:this={shadowElement} />
+    <div class="svlt-grid-shadow shadow-active" style="width: {shadow.w * xPerPx - gapX * 2}px; height: {shadow.h * yPerPx - gapY * 2}px; transform: translate({shadow.x * xPerPx + gapX}px, {shadow.y * yPerPx + gapY}px); " bind:this={shadowElement}></div>
 {/if}
 
-<script>
+<script module lang="ts">
+  export type RepaintEvent = CustomEvent<{
+    id: string|number,
+    shadow: {
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+    },
+    isPointerUp?: boolean,
+    onUpdate?: () => void,
+  }>;
+</script>
+
+<script lang="ts">
+    import type { ColumnItem } from "$lib/utils/types.js";
   import { createEventDispatcher } from "svelte";
 
   const dispatch = createEventDispatcher();
 
-  export let sensor;
-  export let width;
-  export let height;
-  export let left;
-  export let top;
+  let {
+    sensor,
+    width,
+    height,
+    left,
+    top,
+    resizable,
+    draggable,
+    id,
+    container,
+    xPerPx,
+    yPerPx,
+    gapX,
+    gapY,
+    item,
+    max,
+    min,
+    cols,
+    nativeContainer,
+  }: {
+    sensor: number;
+    width: number;
+    height: number;
+    left: number;
+    top: number;
+    resizable: boolean;
+    draggable: boolean;
+    id: string | number;
+    container: Element;
+    xPerPx: number;
+    yPerPx: number;
+    gapX: number;
+    gapY: number;
+    item: ColumnItem;
+    max: ColumnItem['max'] & {y?: number};
+    min: ColumnItem['min'];
+    cols: number;
+    nativeContainer: Element;
+  } = $props();
 
-  export let resizable;
-  export let draggable;
+  let shadowElement: Element|undefined = $state();
+  let shadow = $state({ x: 0, y: 0, w: 0, h: 0 });
 
-  export let id;
-  export let container;
+  let active = $state(false);
 
-  export let xPerPx;
-  export let yPerPx;
+  let initX: number = $state(0);
+  let initY: number = $state(0);
 
-  export let gapX;
-  export let gapY;
-  export let item;
-
-  export let max;
-  export let min;
-
-  export let cols;
-
-  export let nativeContainer;
-
-  let shadowElement;
-  let shadow = {};
-
-  let active = false;
-
-  let initX, initY;
-
-  let capturePos = {
+  let capturePos = $state({
     x: 0,
     y: 0,
-  };
+  });
 
-  let cordDiff = { x: 0, y: 0 };
+  let cordDiff = $state({ x: 0, y: 0 });
 
-  let newSize = { width, height };
-  let trans = false;
+  let newSize = $state({ width, height });
+  let trans = $state(false);
 
-  let anima;
+  let anima: number|undefined = $state();
 
   const inActivate = () => {
+    if (!shadowElement) {
+      throw new Error('Element not bound');
+    }
     const shadowBound = shadowElement.getBoundingClientRect();
     const xdragBound = rect.left + cordDiff.x;
     const ydragBound = rect.top + cordDiff.y;
@@ -146,24 +179,24 @@
     });
   };
 
-  let repaint = (cb, isPointerUp) => {
+  let repaint = (cb?: () => void, isPointerUp?: boolean) => {
     dispatch("repaint", {
       id,
       shadow,
       isPointerUp,
       onUpdate: cb,
-    });
+    } satisfies RepaintEvent['detail']);
   };
 
   // Autoscroll
-  let _scrollTop = 0;
-  let containerFrame;
-  let rect;
-  let scrollElement;
+  let _scrollTop = $state(0);
+  let containerFrame: ReturnType<typeof getContainerFrame>|undefined = $state();
+  let rect = $state({ left: 0, top: 0 });
+  let scrollElement: Element|undefined = $state();
 
-  const getContainerFrame = (element) => {
+  const getContainerFrame = (element: Element) => {
     if (element === document.documentElement || !element) {
-      const { height, top, right, bottom, left } = nativeContainer.getBoundingClientRect();
+      const { top, bottom } = nativeContainer.getBoundingClientRect();
 
       return {
         top: Math.max(0, top),
@@ -174,9 +207,9 @@
     return element.getBoundingClientRect();
   };
 
-  const getScroller = (element) => (!element ? document.documentElement : element);
+  const getScroller = (element: Element) => (!element ? document.documentElement : element);
 
-  const pointerdown = ({ clientX, clientY, target }) => {
+  const pointerdown = ({ clientX, clientY, target }: PointerEvent) => {
     initX = clientX;
     initY = clientY;
 
@@ -188,8 +221,12 @@
     scrollElement = getScroller(container);
 
     cordDiff = { x: 0, y: 0 };
-    rect = target.closest(".svlt-grid-item").getBoundingClientRect();
-
+    if (target){
+      const closestGridItem = (target as Element).closest(".svlt-grid-item");
+      if (closestGridItem) {
+        rect = closestGridItem.getBoundingClientRect();
+      }
+    }
     active = true;
     trans = false;
     _scrollTop = scrollElement.scrollTop;
@@ -198,19 +235,26 @@
     window.addEventListener("pointerup", pointerup);
   };
 
+  function getPointerDownHandler() {
+    if (item && item.customDragger) {
+      return null;
+    }
+    return draggable ? pointerdown : null;
+  }
+
   let sign = { x: 0, y: 0 };
   let vel = { x: 0, y: 0 };
-  let intervalId = 0;
+  let intervalId: number|undefined = $state(undefined);
 
   const stopAutoscroll = () => {
     clearInterval(intervalId);
-    intervalId = false;
+    intervalId = undefined;
     sign = { x: 0, y: 0 };
     vel = { x: 0, y: 0 };
   };
 
   const update = () => {
-    const _newScrollTop = scrollElement.scrollTop - _scrollTop;
+    const _newScrollTop = (scrollElement?.scrollTop ?? 0) - _scrollTop;
 
     const boundX = capturePos.x + cordDiff.x;
     const boundY = capturePos.y + (cordDiff.y + _newScrollTop);
@@ -228,7 +272,7 @@
     repaint();
   };
 
-  const pointermove = (event) => {
+  const pointermove = (event: PointerEvent) => {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
@@ -237,6 +281,10 @@
     cordDiff = { x: clientX - initX, y: clientY - initY };
 
     const Y_SENSOR = sensor;
+
+    if (!containerFrame) {
+      throw new Error('Container frame not set');
+    }
 
     let velocityTop = Math.max(0, (containerFrame.top + Y_SENSOR - clientY) / Y_SENSOR);
     let velocityBottom = Math.max(0, (clientY - (containerFrame.bottom - Y_SENSOR)) / Y_SENSOR);
@@ -248,11 +296,11 @@
     vel.y = sign.y === -1 ? velocityTop : velocityBottom;
 
     if (vel.y > 0) {
-      if (!intervalId) {
+      if (!intervalId && scrollElement) {
         // Start scrolling
         // TODO Use requestAnimationFrame
         intervalId = setInterval(() => {
-          scrollElement.scrollTop += 2 * (vel.y + Math.sign(vel.y)) * sign.y;
+          scrollElement!.scrollTop += 2 * (vel.y + Math.sign(vel.y)) * sign.y;
           update();
         }, 10);
       }
@@ -263,7 +311,7 @@
     }
   };
 
-  const pointerup = (e) => {
+  const pointerup = () => {
     stopAutoscroll();
 
     window.removeEventListener("pointerdown", pointerdown);
@@ -277,7 +325,7 @@
   let resizeInitPos = { x: 0, y: 0 };
   let initSize = { width: 0, height: 0 };
 
-  const resizePointerDown = (e) => {
+  const resizePointerDown = (e: PointerEvent) => {
     e.stopPropagation();
     const { pageX, pageY } = e;
 
@@ -285,7 +333,12 @@
     initSize = { width, height };
 
     cordDiff = { x: 0, y: 0 };
-    rect = e.target.closest(".svlt-grid-item").getBoundingClientRect();
+    if (e.target) {
+      const closest = (e.target as Element).closest(".svlt-grid-item")
+      if (closest) {
+        rect = closest.getBoundingClientRect();
+      }
+    }
     newSize = { width, height };
 
     active = true;
@@ -299,7 +352,7 @@
     window.addEventListener("pointerup", resizePointerUp);
   };
 
-  const resizePointerMove = ({ pageX, pageY }) => {
+  const resizePointerMove = ({ pageX, pageY }: PointerEvent) => {
     newSize.width = initSize.width + pageX - resizeInitPos.x;
     newSize.height = initSize.height + pageY - resizeInitPos.y;
 
@@ -322,7 +375,7 @@
     repaint();
   };
 
-  const resizePointerUp = (e) => {
+  const resizePointerUp = (e: PointerEvent) => {
     e.stopPropagation();
 
     repaint(inActivate, true);

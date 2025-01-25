@@ -1,15 +1,18 @@
-export function throttle(func, timeFrame) {
+import type { Column, Item } from "./types.js";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function throttle<T extends (...args: any[]) => any>(func: T, timeFrame: number): T {
   let lastTime = 0;
   return function (...args) {
-    let now = new Date();
+    const now = Date.now();
     if (now - lastTime >= timeFrame) {
       func(...args);
       lastTime = now;
     }
-  };
+  } as T;
 }
 
-export function getRowsCount(items, cols) {
+export function getRowsCount(items: Item[], cols: number) {
   const getItemsMaxHeight = items.map((val) => {
     const item = val[cols];
 
@@ -19,7 +22,7 @@ export function getRowsCount(items, cols) {
   return Math.max(...getItemsMaxHeight, 1);
 }
 
-export const getColumn = (containerWidth, columns) => {
+export const getColumn = (containerWidth: number, columns: Column[]): number => {
   const sortColumns = columns.slice().sort((a, b) => a[0] - b[0]);
 
   const breakpoint = sortColumns.find((value) => {
