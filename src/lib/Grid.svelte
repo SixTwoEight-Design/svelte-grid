@@ -9,8 +9,8 @@
   {#if xPerPx || !fastStart}
     {#each items as item, i (item.id)}
       <MoveResize
-        on:repaint={handleRepaint}
-        on:pointerup={pointerup}
+        onrepaint={handleRepaint}
+        onpointerup={pointerup}
         id={item.id}
         resizable={item[getComputedCols] && item[getComputedCols].resizable}
         draggable={item[getComputedCols] && item[getComputedCols].draggable}
@@ -43,17 +43,36 @@
 <script module lang="ts">
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type T = any; //Just for LSP to stop complaining
+
+  export type OnResizeCallback = (data: {
+      cols: number,
+      xPerPx: number,
+      yPerPx: number,
+      width: number,
+    }) => void;
+  export type OnMountCallback = (data: {
+    cols: number,
+    xPerPx: number,
+    yPerPx: number,
+  }) => void;
+  export type OnPointerUpCallback = (data: {
+    id: string|number,
+    cols: number,
+  }) => void;
+  export type OnChangeCallback<T> = (data: {
+      unsafeItem: Item<T>,
+      id: Item['id'],
+      cols: number,
+  }) => void
 </script>
 
 <script lang="ts" generics="T = any">
   import { getContainerHeight } from "./utils/container.js";
   import { moveItemsAroundItem, moveItem, getItemById, specifyUndefinedColumns } from "./utils/item.js";
-  import { onMount, createEventDispatcher, type Snippet } from "svelte";
+  import { onMount, type Snippet } from "svelte";
   import { getColumn, throttle } from "./utils/other.js";
-  import MoveResize, { type RepaintEvent } from "./MoveResize.svelte";
+  import MoveResize, { type RepaintData, type PointerUpData } from "./MoveResize.svelte";
   import type { Column, ColumnItem, Item } from "./utils/types.js";
-
-  const dispatch = createEventDispatcher();
 
   let {
     renderItem,
@@ -69,6 +88,11 @@
     throttleResize = 100,
     scroller,
     sensor = 20,
+
+    onresize,
+    onmount,
+    onpointerup,
+    onchange,
   }: {
     renderItem: Snippet<[{
       item: Item<T>,
@@ -89,6 +113,11 @@
     throttleResize?: number;
     scroller?: Element;
     sensor?: number;
+
+    onresize?: OnResizeCallback,
+    onmount?: OnMountCallback,
+    onpointerup?: OnPointerUpCallback,
+    onchange?: OnChangeCallback<T>,
   } = $props();
 
   let getComputedCols: number = $state(0);
@@ -104,21 +133,21 @@
 
   let containerHeight = $derived(getContainerHeight(items, yPerPx, getComputedCols));
 
-  const pointerup = (ev: CustomEvent) => {
-    dispatch("pointerup", {
-      id: ev.detail.id,
+  const pointerup = ({ id }: PointerUpData) => {
+    onpointerup?.({
+      id,
       cols: getComputedCols,
-    });
+    })
   };
 
   const onResize = throttle(() => {
     items = specifyUndefinedColumns(items, getComputedCols, cols);
-    dispatch("resize", {
+    onresize?.({
       cols: getComputedCols,
       xPerPx,
       yPerPx,
       width: containerWidth,
-    });
+    })
   }, throttleUpdate);
 
   onMount(() => {
@@ -135,7 +164,7 @@
         if (!containerWidth) {
           items = specifyUndefinedColumns(items, getComputedCols, cols);
 
-          dispatch("mount", {
+          onmount?.({
             cols: getComputedCols,
             xPerPx,
             yPerPx, // same as rowHeight
@@ -155,41 +184,41 @@
     return () => sizeObserver.disconnect();
   });
 
-  const updateMatrix = ({ detail }: RepaintEvent) => {
-    let activeItem = getItemById(detail.id, items);
+  const updateMatrix = (data: RepaintData) => {
+    let activeItem = getItemById(data.id, items);
 
     if (activeItem) {
       activeItem = {
         ...activeItem,
         [getComputedCols]: {
           ...activeItem[getComputedCols],
-          ...detail.shadow,
+          ...data.shadow,
         },
       };
 
       if (fillSpace) {
-        items = moveItemsAroundItem(activeItem, items, getComputedCols, getItemById(detail.id, items));
+        items = moveItemsAroundItem(activeItem, items, getComputedCols, getItemById(data.id, items));
       } else {
-        items = moveItem(activeItem, items, getComputedCols, getItemById(detail.id, items));
+        items = moveItem(activeItem, items, getComputedCols, getItemById(data.id, items));
       }
 
-      if (detail.onUpdate) detail.onUpdate();
+      if (data.onUpdate) data.onUpdate();
 
-      dispatch("change", {
+      onchange?.({
         unsafeItem: activeItem,
         id: activeItem.id,
         cols: getComputedCols,
-      });
+      })
     }
   };
 
   const throttleMatrix = throttle(updateMatrix, throttleResize);
 
-  const handleRepaint = (event: RepaintEvent) => {
-    if (!event.detail.isPointerUp) {
-      throttleMatrix(event);
+  const handleRepaint = (data: RepaintData) => {
+    if (!data.isPointerUp) {
+      throttleMatrix(data);
     } else {
-      updateMatrix(event);
+      updateMatrix(data);
     }
   };
 </script>

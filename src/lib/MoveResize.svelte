@@ -77,7 +77,10 @@
 {/if}
 
 <script module lang="ts">
-  export type RepaintEvent = CustomEvent<{
+  export type PointerUpData = {
+    id: string|number,
+  }
+  export type RepaintData = {
     id: string|number,
     shadow: {
         x: number;
@@ -87,18 +90,18 @@
     },
     isPointerUp?: boolean,
     onUpdate?: () => void,
-  }>;
+  };
 </script>
 
 <script lang="ts">
-    import type { ColumnItem } from "$lib/utils/types.js";
-  import { createEventDispatcher, type Snippet } from "svelte";
-
-  const dispatch = createEventDispatcher();
+  import type { ColumnItem } from "$lib/utils/types.js";
+  import { type Snippet } from "svelte";
 
   let {
     renderItemContent,
 
+    onpointerup,
+    onrepaint,
     sensor,
     width,
     height,
@@ -121,8 +124,10 @@
     renderItemContent: Snippet<[{
       movePointerDown: (e: PointerEvent) => void,
       resizePointerDown: (e: PointerEvent) => void
-    }]>
+    }]>;
 
+    onpointerup: (data: PointerUpData) => void;
+    onrepaint: (data: RepaintData) => void;
     sensor: number;
     width: number;
     height: number;
@@ -183,18 +188,16 @@
       trans = false;
     }, 100);
 
-    dispatch("pointerup", {
-      id,
-    });
+    onpointerup({id})
   };
 
   let repaint = (cb?: () => void, isPointerUp?: boolean) => {
-    dispatch("repaint", {
+    onrepaint({
       id,
       shadow,
       isPointerUp,
       onUpdate: cb,
-    } satisfies RepaintEvent['detail']);
+    })
   };
 
   // Autoscroll
