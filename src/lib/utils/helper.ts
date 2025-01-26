@@ -8,7 +8,7 @@ type MakeItem = Partial<ColumnItem> & Pick<ColumnItem, 'x'|'y'|'h'|'w'>
 function makeItem(item: MakeItem): ColumnItem {
   const { min = { w: 1, h: 1 }, max } = item;
   return {
-    fixed: false,
+    fixed: !!item.fixed,
     resizable: !item.fixed,
     draggable: !item.fixed,
     customDragger: false,
