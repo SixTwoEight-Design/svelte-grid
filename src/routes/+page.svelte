@@ -81,6 +81,9 @@
             <br />
             <button type="button" onclick={() => {
               items[index][columns].fixed = !items[index][columns].fixed
+              items[index][columns].resizable = !items[index][columns].fixed
+              items[index][columns].draggable = !items[index][columns].fixed
+              //TODO why doesn't this immediately re-render that it has been changed?
             }}>Pin</button>
         </div>
     {/snippet}
