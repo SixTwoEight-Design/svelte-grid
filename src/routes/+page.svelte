@@ -44,10 +44,11 @@
       6: gridHelp.item({
         h: 4,
         w: 2,
-        x: 0,
-        y: 4,
+        x: 3,
+        y: 5,
         min: {w: 1,h: 1},
         max: {w: 2,h: 4},
+        fixed: true,
       }),
       id: 'c',
       data: {
@@ -60,18 +61,42 @@
 </script>
 
 <Grid
-    cols={[[1200, 6]]}
+    cols={[[800,3], [1200, 6]]}
     bind:items={items}
     rowHeight={64}
     gap={[8,8]}
+    showGrid={true}
 >
-    {#snippet renderItem({item, columnItem})}
-        <div style={`width: 100%; height: 100%; box-shadow: 0 0 4px black; background: ${item.data.colour}`}>
+    {#snippet renderItem({item, columnItem, index, columns})}
+        <div class="w-full h-full shadow-md rounded-md p-4" style={`background: ${item.data.colour}`}>
             {#if columnItem.w > 1 }
                 {item.data.bigText}
             {:else}
                 {item.data.text}
             {/if}
+            {#if columnItem.fixed}
+                PINNED
+            {/if}
+
+            <br />
+            <button type="button" onclick={() => {
+              items[index][columns].fixed = !items[index][columns].fixed
+            }}>Pin</button>
         </div>
     {/snippet}
 </Grid>
+
+<style>
+    :global(.svlt-grid-shadow) {
+        /* Back shadow */
+        background: gray !important;
+    }
+    :global(.svlt-grid-container) {
+        /* Container color */
+        background: #eee;
+    }
+    :global(.svlt-grid-resizer::after) {
+        /* Resizer color */
+        border-color: red !important;
+    }
+</style>
