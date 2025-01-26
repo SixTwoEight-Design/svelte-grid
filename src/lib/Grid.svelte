@@ -3,10 +3,33 @@
     position: relative;
     width: 100%;
   }
+
+  .svlt-grid-line {
+    position: absolute;
+    background-color: black;
+    opacity: 0.2;
+  }
+  .svlt-grid-line.vertical {
+    height: 100%;
+    width: 1px;
+  }
+  .svlt-grid-line.horizontal {
+    height: 1px;
+    width: 100%;
+  }
 </style>
 
 <div class="svlt-grid-container" style="height: {containerHeight}px" bind:this={container}>
   {#if xPerPx || !fastStart}
+    {#if showGrid}
+      {#each new Array(getComputedCols), x (x)}
+          <div class="svlt-grid-line vertical" style={`left: ${x * xPerPx}px;`}></div>
+      {/each}
+      {#each new Array(getComputedRows), y (y)}
+        <div class="svlt-grid-line horizontal" style={`top: ${y * yPerPx}px;`}></div>
+      {/each}
+    {/if}
+
     {#each items as item, i (item.id)}
       <MoveResize
         onrepaint={handleRepaint}
@@ -70,7 +93,7 @@
   import { getContainerHeight } from "./utils/container.js";
   import { moveItemsAroundItem, moveItem, getItemById, specifyUndefinedColumns } from "./utils/item.js";
   import { onMount, type Snippet } from "svelte";
-  import { getColumn, throttle } from "./utils/other.js";
+  import { getColumn, getRowsCount, throttle } from "./utils/other.js";
   import MoveResize, { type RepaintData, type PointerUpData } from "./MoveResize.svelte";
   import type { ColumnBreakpoint, ColumnItem, Id, Item } from "./utils/types.js";
 
@@ -88,6 +111,7 @@
     throttleResize = 100,
     scroller,
     sensor = 20,
+    showGrid = false,
 
     onresize,
     onmount,
@@ -104,16 +128,24 @@
     }]>;
 
     items: Item<T>[];
+    /** Row height in px */
     rowHeight: number;
+    /** Breakpoints for the number of columns to render depending on screen size */
     cols: ColumnBreakpoint[];
 
-    gap?: [number, number];
+    /** The gap between items on the grid */
+    gap?: [x: number, y: number];
+    /** If true, moving an item will move other items into the space created if possible */
     fillSpace?: boolean;
+    /** Removes transition on load */
     fastStart?: boolean;
     throttleUpdate?: number;
     throttleResize?: number;
     scroller?: Element;
+    /** Set the distance from the cursor to the edge */
     sensor?: number;
+    /** Whether to render a grid behind the items */
+    showGrid?: boolean;
 
     onresize?: OnResizeCallback,
     onmount?: OnMountCallback,
@@ -122,6 +154,7 @@
   } = $props();
 
   let getComputedCols: number = $state(0);
+  let getComputedRows: number = $derived(getRowsCount(items, getComputedCols));
 
   let container: Element|undefined = $state();
 
