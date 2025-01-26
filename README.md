@@ -21,7 +21,8 @@
 
 ## About
 
-- 100% Svelte (or vanillajs) - no jQuery, no 3rd party dependencies
+- 100% Svelte 5 - no jQuery, no 3rd party dependencies
+- Written in Typescript
 - Compatible with Sapper (SSR Svelte)
 - Draggable widgets
 - Resizable widgets
@@ -39,5 +40,17 @@
 **via NPM**
 
 ```code
-npm i svelte-grid --save-dev
+npm i svelte-grid
+```
+
+**via Yarn**
+
+```code
+yarn add svelte-grid
+```
+
+**via Bun**
+
+```code
+bun add svelte-grid
 ```
