@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+ul {
+    @apply list-disc;
+}
+
+a {
+    @apply text-blue-500 underline;
+}
+
+h1 {
+    @apply text-lg font-bold;
+}
+
+.btn {
+    @apply rounded-md p-2 bg-blue-200 cursor-pointer;
+    @apply hover:bg-blue-300;
+    @apply disabled:bg-gray-200 disabled:cursor-not-allowed;
+}
